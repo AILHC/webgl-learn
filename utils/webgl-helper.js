@@ -129,7 +129,7 @@ function createProgramFromScript(gl, vertexScriptId, fragmentScriptId) {
   return program;
 }
 function createBuffer(gl, attribute, vertexAttribPointer) {
-  let {size, type, normalize, stride, offset} = vertexAttribPointer;
+  let { size, type, normalize, stride, offset } = vertexAttribPointer;
   gl.enableVertexAttribArray(attribute);
   let buffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
@@ -147,11 +147,13 @@ function createBuffer(gl, attribute, vertexAttribPointer) {
 function loadTexture(gl, src, attribute, callback) {
   let img = new Image();
   img.crossOrigin = 'anonymous';
-  img.onload = function() {
+  img.onload = function () {
     gl.activeTexture(gl.TEXTURE0);
     let texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameterf(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameterf(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.uniform1i(attribute, 0);
@@ -180,7 +182,7 @@ function createColorForVertex(vertex, c) {
 }
 
 function createAttributeSetter(gl, attributeIndex) {
-  return function(bufferInfo) {
+  return function (bufferInfo) {
     gl.bindBuffer(gl.ARRAY_BUFFER, bufferInfo.buffer);
     gl.enableVertexAttribArray(attributeIndex);
     gl.vertexAttribPointer(
@@ -233,86 +235,86 @@ function createUniformSetters(gl, program) {
 let enums = {
   FLOAT_VEC2: {
     value: 0x8b50,
-    setter: function(location, v) {
+    setter: function (location, v) {
       gl.uniform2fv(location, v);
     }
   },
   FLOAT_VEC3: {
     value: 0x8b51,
-    setter: function(location, v) {
+    setter: function (location, v) {
       console.log(v);
       gl.uniform3fv(location, v);
     }
   },
   FLOAT_VEC4: {
     value: 0x8b52,
-    setter: function(location, v) {
+    setter: function (location, v) {
       gl.uniform3fv(location, v);
     }
   },
   INT_VEC2: {
     value: 0x8b53,
-    setter: function(location, v) {
+    setter: function (location, v) {
       gl.uniform2iv(location, v);
     }
   },
   INT_VEC3: {
     value: 0x8b54,
-    setter: function(location, v) {
+    setter: function (location, v) {
       gl.uniform3iv(location, v);
     }
   },
   INT_VEC4: {
     value: 0x8b55,
-    setter: function(location, v) {
+    setter: function (location, v) {
       gl.uniform4iv(location, v);
     }
   },
   BOOL: {
     value: 0x8b56,
-    setter: function(location, v) {
+    setter: function (location, v) {
       gl.uniform1iv(location, v);
     }
   },
   BOOL_VEC2: {
     value: 0x8b57,
-    setter: function(location, v) {
+    setter: function (location, v) {
       gl.uniform2iv(location, v);
     }
   },
   BOOL_VEC3: {
     value: 0x8b58,
-    setter: function(location, v) {
+    setter: function (location, v) {
       gl.uniform3iv(location, v);
     }
   },
   BOOL_VEC4: {
     value: 0x8b59,
-    setter: function(location, v) {
+    setter: function (location, v) {
       gl.uniform4iv(location, v);
     }
   },
   FLOAT_MAT2: {
     value: 0x8b5a,
-    setter: function(location, v) {
+    setter: function (location, v) {
       gl.uniformMatrix2fv(location, false, v);
     }
   },
   FLOAT_MAT3: {
     value: 0x8b5b,
-    setter: function(location, v) {
+    setter: function (location, v) {
       gl.uniformMatrix3fv(location, false, v);
     }
   },
   FLOAT_MAT4: {
     value: 0x8b5c,
-    setter: function(location, v) {
+    setter: function (location, v) {
       gl.uniformMatrix4fv(location, false, v);
     }
   },
   SAMPLER_2D: {
     value: 0x8b5e,
-    setter: function(location, texture) {
+    setter: function (location, texture) {
       gl.uniform1i(location, 0);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -320,7 +322,7 @@ let enums = {
   },
   SAMPLER_CUBE: {
     value: 0x8b60,
-    setter: function(location, texture) {
+    setter: function (location, texture) {
       gl.uniform1i(location, 0);
       gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture);
@@ -329,14 +331,14 @@ let enums = {
 
   INT: {
     value: 0x1404,
-    setter: function(location, v) {
+    setter: function (location, v) {
       gl.uniform1i(location, v);
     }
   },
 
   FLOAT: {
     value: 0x1406,
-    setter: function(location, v) {
+    setter: function (location, v) {
       gl.uniform1f(location, v);
     }
   }
@@ -354,12 +356,12 @@ function createUniformSetter(gl, program, uniformInfo) {
   let isArray = uniformInfo.size > 1 && uniformInfo.name.substr(-3) === '[0]';
 
   if (isArray && type == enums.INT.value) {
-    return function(v) {
+    return function (v) {
       gl.uniform1iv(uniformLocation, v);
     };
   }
   if (isArray && type == enums.FLOAT.value) {
-    return function(v) {
+    return function (v) {
       gl.uniform1fv(uniformLocation, v);
     };
   }
@@ -370,7 +372,7 @@ function createUniformSetter(gl, program, uniformInfo) {
 
 function buffer2Attribute(object) {
   let map = {};
-  Object.keys(object).forEach(function(name) {
+  Object.keys(object).forEach(function (name) {
     if (name == 'indices') {
       return;
     }
@@ -417,7 +419,7 @@ function makeTypedArray(data, name) {
 
   typedArray.numsPerElement = data.numsPerElement;
   Object.defineProperty(typedArray, 'elementsCount', {
-    get: function() {
+    get: function () {
       return this.length / this.numsPerElement;
     }
   });
@@ -457,7 +459,7 @@ function getNormalize(array) {
 function makeAttributesInBufferInfo(gl, object) {
   let mapping = buffer2Attribute(object);
   let attributeObject = {};
-  Object.keys(mapping).forEach(function(attributeName) {
+  Object.keys(mapping).forEach(function (attributeName) {
     let bufferName = mapping[attributeName];
     let array = makeTypedArray(object[bufferName], bufferName);
     attributeObject[attributeName] = {
@@ -510,7 +512,7 @@ function setBufferInfos(gl, setters, buffers) {
 
 function setAttributes(setters, attributes) {
   setters = setters.attributeSetters || setters;
-  Object.keys(attributes).forEach(function(name) {
+  Object.keys(attributes).forEach(function (name) {
     let setter = setters[name];
     if (setter) {
       setter(attributes[name]);
@@ -520,7 +522,7 @@ function setAttributes(setters, attributes) {
 
 function setUniforms(setters, values) {
   setters = setters.uniformSetters || setters;
-  Object.keys(values).forEach(function(name) {
+  Object.keys(values).forEach(function (name) {
     let setter = setters[name];
     if (setter) {
       setter(values[name]);
@@ -534,20 +536,20 @@ function List(list) {
   this.uuid = this.list.length;
 }
 // 添加对象
-List.prototype.add = function(object) {
+List.prototype.add = function (object) {
   object.uuid = this.uuid;
   this.list.push(object);
   this.uuid++;
 };
 // 删除对象
-List.prototype.remove = function(object) {
+List.prototype.remove = function (object) {
   this.list.splice(object.uuid, 1);
 };
 // 删除对象
-List.prototype.get = function(index) {
+List.prototype.get = function (index) {
   return this.list[index];
 };
 // 添加对象
-List.prototype.forEach = function(fun) {
+List.prototype.forEach = function (fun) {
   this.list.forEach(fun);
 };
