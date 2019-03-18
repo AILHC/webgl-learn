@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>绘制三角形</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="../css/common.css" />
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script type="shader-source" id="vertexShader">
+            //浮点数设置为中等精度
+            precision mediump float;
+            //接收 JavaScript 传递过来的点的坐标（X, Y）
+            attribute vec2 a_Position;
+            void main(){
+                //四维向量，x ,y,z ,w w是透视距离
+                gl_Position = vec4(a_Position, 0, 1);
+                
+            }
+        </script>
+    <script type="shader-source" id="fragmentShader">
+            //浮点数设置为中等精度
+            precision mediump float;
+            //全局变量，用来接收 JavaScript传递过来的颜色。
+            uniform vec4 u_Color;
+            void main(){
+                // 将颜色处理成 GLSL 允许的范围[0， 1]。
+                vec4 color = u_Color / vec4(255, 255, 255, 1);
+                // 点的最终颜色。
+                gl_FragColor = color;
+            }
+        </script>
+    <script src="../utils/webgl-helper.js"></script>
+    <script>
+
+        //获取canvas
+        var canvas = getCanvas("#canvas");
+        //设置canvas尺寸为满屏
+        resizeCanvas(canvas);
+        //获取绘图上下文
+        let gl = getContext(canvas);
+        //创建顶点着色器
+        let vertexShader = createShaderFromScript(gl, gl.VERTEX_SHADER, 'vertexShader');
+        //创建片元着色器
+        let fragmentShader = createShaderFromScript(gl, gl.FRAGMENT_SHADER, 'fragmentShader');
+        //创建着色器程序
+        let program = createSimpleProgram(gl, vertexShader, fragmentShader);
+        //使用该着色器程序
+        gl.useProgram(program);
+
+        //三角形顶点数组(暂时不要z轴)
+        var vertexs = [1, 0, 0, 1, 0, 0];
+
+        //获取顶点着色器中的变量a_Position的位置。
+        let a_Position = gl.getAttribLocation(program, 'a_Position');
+
+        //获取片元着色器中的变量u_Color的位置。
+        let u_Color = gl.getUniformLocation(program, 'u_Color');
+        //创建缓冲区
+        let color = randomColor();
+        //向片元着色器传递颜色信息
+        gl.uniform4f(u_Color, color.r, color.g, color.b, color.a);
+        var buffer = gl.createBuffer();
+        //绑定缓冲区为当前缓冲区
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        // 接下来往当前缓冲区（即上一步通过 bindBuffer 绑定的缓冲区）中写入数据。
+        /**
+         * 注意，着色器程序中的变量需要强类型数据，
+         * 所以我们在往缓冲区写数据的时候，
+         * JS 的弱类型数组一定要用类型化数组转化一下。
+         * 上面的 new Float32Array(vertexs)，
+         * 目的就是将 JavaScript 中的弱类型数组转化为强类型数组。
+        */
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexs), gl.STATIC_DRAW);
+        /**
+         * 我们需要告诉 WebGL 如何从之前创建的缓冲区中获取数据，并且传递给顶点着色器中的 a_Position 属性。
+         *  那么，首先启用对应属性 a_Position：
+         * */
+        gl.enableVertexAttribArray(a_Position);
+        //每次取两个数据
+        var size = 2;
+        //每个数据的类型是32位浮点型
+        var type = gl.FLOAT;
+        //不需要归一化数据
+        var normalize = false;
+        // 每次迭代运行需要移动数据数 * 每个数据所占内存 到下一个数据开始点。
+        var stride = 0;
+        // 从缓冲起始位置开始读取     
+        var offset = 0;
+        // 将 a_Position 变量获取数据的缓冲区指向当前绑定的 buffer。
+        gl.vertexAttribPointer(
+            a_Position, size, type, normalize, stride, offset)
+
+        // canvas.addEventListener('click', e => {
+
+        // })
+        // canvas.addEventListener('mousemove', e => {
+        //     let x = e.pageX;
+        //     let y = e.pageY;
+        //     let color = randomColor();
+        //     //存储新的点的坐标和颜色。
+        //     points.push({ x: x, y: y, color: color })
+        //     render(gl);
+        // })
+        //绘制函数
+        function render(gl) {
+
+            //清除屏幕
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            //绘制图元设置为三角形
+            var primitiveType = gl.TRIANGLES;
+            //从顶点数组的开始位置取顶点数据
+            var offset = 0;
+            //因为我们要绘制三个点，所以执行三次顶点绘制操作。
+            var count = 3;
+
+            gl.drawArrays(primitiveType, offset, count);
+        }
+        //设置屏幕清除颜色为黑色。
+        gl.clearColor(0, 0, 0, 1.0);
+        //绘制
+        render(gl);
+
+    </script>
+
+</body>
