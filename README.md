@@ -5,5 +5,5 @@
 
 例子
 
-1. [使用三角带绘制矩形](./使用三角带绘制矩形.html)
+1. [使用三角带绘制矩形](https://ailhc.github.io/webgl-learn/cases/绘制三角形)
 
