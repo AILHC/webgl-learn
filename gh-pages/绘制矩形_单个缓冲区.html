@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>绘制矩形_单个缓冲区</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="../css/common.css" />
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script type="shader-source" id="vertexShader">
+        //设置浮点数精度为中等精度。
+        precision mediump float;
+        //接收顶点坐标 (x, y)
+        attribute vec2 a_Position;
+        //接收浏览器窗口尺寸(width, height)
+        attribute vec2 a_Screen_Size;
+        //接收 JavaScript 传递的顶点颜色
+        attribute vec4 a_Color;
+        //传往片元着色器的颜色。
+        varying vec4 v_Color;
+        void main(){
+          vec2 position = (a_Position / a_Screen_Size) * 2.0 - 1.0;
+          position = position * vec2(1.0,-1.0);
+          gl_Position = vec4(position, 0, 1);
+          v_Color = a_Color;
+        }    
+        </script>
+    <script type="shader-source" id="fragmentShader">
+        //设置浮点数精度为中等。
+        precision mediump float;
+        //接收 JavaScript 传过来的颜色值（rgba）。
+        varying vec4 v_Color;
+        void main(){
+          vec4 color = v_Color / vec4(255, 255, 255, 1);
+          gl_FragColor = color;
+       }
+        </script>
+    <script src="../utils/webgl-helper.js"></script>
+    <script>
+
+        //获取canvas
+        var canvas = getCanvas("#canvas");
+        //设置canvas尺寸为满屏
+        resizeCanvas(canvas);
+        //获取绘图上下文
+        let gl = getContext(canvas);
+        //创建顶点着色器
+        let vertexShader = createShaderFromScript(gl, gl.VERTEX_SHADER, 'vertexShader');
+        //创建片元着色器
+        let fragmentShader = createShaderFromScript(gl, gl.FRAGMENT_SHADER, 'fragmentShader');
+        //创建着色器程序
+        let program = createSimpleProgram(gl, vertexShader, fragmentShader);
+        //使用该着色器程序
+        gl.useProgram(program);
+
+        let a_Screen_Size = gl.getAttribLocation(program, 'a_Screen_Size');
+        gl.vertexAttrib2f(a_Screen_Size, canvas.width, canvas.height);
+        //顶点坐标数组
+        // 首先准备组成矩形的三角形，每个三角形由三个顶点组成，两个矩形共需要六个顶点。
+        // 我们给两个三角形设置不同颜色，其中，V0->V1->V2 三角形设置为红色， VO->V2->V3 三角形设置为绿色。
+        var positions = [
+            30, 30, 255, 0, 0, 1,    //V0
+            30, 300, 255, 0, 0, 1,   //V1
+            300, 300, 255, 0, 0, 1,  //V2
+            30, 30, 0, 255, 0, 1,    //V0
+            300, 300, 0, 255, 0, 1,  //V2
+            300, 30, 0, 255, 0, 1    //V3
+        ]
+        let a_Position = gl.getAttribLocation(program, 'a_Position');
+        let a_Color = gl.getAttribLocation(program, 'a_Color');
+        gl.enableVertexAttribArray(a_Position);
+        gl.enableVertexAttribArray(a_Color);
+
+        //c创建缓冲区
+        let buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        //设置读取buffer的规则
+        // WebGLRenderingContext.vertexAttribPointer() https://developer.mozilla.org/zh-CN/docs/Web/API/WebGLRenderingContext/vertexAttribPointer
+        // 指定一个顶点attributes 数组中，顶点attributes 变量的数据格式和位置。
+        //颜色的，从 位置信息后面开始读，x,y 两个元素 4个字节 2*4 = 8；offset = 8;
+        //颜色的，步长 stride 每隔多少个字节 一组元素 ， 位置两个元素，颜色4个元素，（2+4 ）*4=24
+        gl.vertexAttribPointer(
+            a_Color, 4, gl.FLOAT, false, 24, 8);
+        //位置的，从0开始读，步长同上
+        gl.vertexAttribPointer(
+            a_Position, 2, gl.FLOAT, false, 24, 0);
+        //设置清除背景颜色为黑色。
+        gl.clearColor(0, 0, 0, 1);
+        // canvas.addEventListener('click', e => {
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+        // })
+        // canvas.addEventListener('click', e => {
+        //     var x = e.pageX;
+        //     var y = e.pageY;
+        //     positions.push(x);
+        //     positions.push(y);
+        //     //随机出一种颜色
+        //     var color = randomColor();
+        //     //将随机颜色的 rgba 值添加到顶点的颜色数组中。
+        //     positions.push(color.r, color.g, color.b, color.a);
+        //     //顶点的数量是 18 的整数倍时，执行绘制操作。
+        //     if (positions.length % 18 == 0) {
+        //         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        //         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+        //         render(gl);
+        //     }
+        // })
+        //绘制函数
+        function render(gl) {
+            //用设置的清空画布颜色清空画布。
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            if (positions.length <= 0) {
+                return;
+            }
+            //绘制图元设置为三角形。
+            var primitiveType = gl.TRIANGLES;
+            //因为我们要绘制三个点，所以执行三次顶点绘制操作。
+            gl.drawArrays(primitiveType, 0, positions.length / 6);
+        }
+        //设置屏幕清除颜色为黑色。
+        gl.clearColor(0, 0, 0, 1.0);
+        //绘制
+        render(gl);
+
+    </script>
+
+</body>

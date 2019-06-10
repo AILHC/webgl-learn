@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>跳动的心</title>
+    <link rel="stylesheet" href="../css/common.css" />
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script type="shader-source" id="vertexShader">
+
+        //浮点数设置为中等精度
+        precision mediump float;
+        uniform float iGlobalTime;
+        uniform sampler2D iChannel0;
+        uniform sampler2D iChannel1;
+        varying vec2 vUv; 
+        void main()
+        {
+            vUv = uv;
+
+            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0 );
+            gl_Position = projectionMatrix * mvPosition;
+        }
+        attribute vec2 a_Screen_Size;
+        uniform float iTime; 
+        // 接收顶点颜色
+        varying vec4 fragColor;
+        void main(){
+            vec2 p = (2.0*gl_FragCoord-a_Screen_Size.xy)/min(a_Screen_Size.y,a_Screen_Size.x);
+	
+            // background color
+            vec3 bcol = vec3(1.0,0.8,0.7-0.07*p.y)*(1.0-0.25*length(p));
+
+            // animate
+            float tt = mod(iTime,1.5)/1.5;
+            float ss = pow(tt,.2)*0.5 + 0.5;
+            ss = 1.0 + ss*0.5*sin(tt*6.2831*3.0 + p.y*0.5)*exp(-tt*4.0);
+            p *= vec2(0.5,1.5) + ss*vec2(0.5,-0.5);
+
+            // shape
+            #if 0
+                p *= 0.8;
+                p.y = -0.1 - p.y*1.2 + abs(p.x)*(1.0-abs(p.x));
+                float r = length(p);
+                float d = 0.5;
+            #else
+                p.y -= 0.25;
+                float a = atan(p.x,p.y)/3.141593;
+                float r = length(p);
+                float h = abs(a);
+                float d = (13.0*h - 22.0*h*h + 10.0*h*h*h)/(6.0-5.0*h);
+            #endif
+            gl_Position = p;
+                // color
+                float s = 0.75 + 0.75*p.x;
+                s *= 1.0-0.4*r;
+                s = 0.3 + 0.7*s;
+                s *= 0.5+0.5*pow( 1.0-clamp(r/d, 0.0, 1.0 ), 0.1 );
+                vec3 hcol = vec3(1.0,0.5*r,0.3)*s;
+        
+                vec3 col = mix( bcol, hcol, smoothstep( -0.01, 0.01, d-r) );
+
+                fragColor = vec4(col,1.0);
+        }
+    </script>
+    <script type="shader-source" id="fragmentShader">
+        //浮点数设置为中等精度
+        precision mediump float;
+        varying vec2 vUv; 
+        void main(void)
+        {
+            vec2 p = gl_FragCoord.xy / iResolution.xy;
+            vec2 q = p - vec2(0.5, 0.5);
+
+            q.x += sin(iGlobalTime* 0.6) * 0.2;
+            q.y += cos(iGlobalTime* 0.4) * 0.3;
+
+            float len = length(q);
+
+            float a = atan(q.y, q.x) + iGlobalTime * 0.3;
+            float b = atan(q.y, q.x) + iGlobalTime * 0.3;
+            float r1 = 0.3 / len + iGlobalTime * 0.5;
+            float r2 = 0.2 / len + iGlobalTime * 0.5;
+
+            float m = (1.0 + sin(iGlobalTime * 0.5)) / 2.0;
+            vec4 tex1 = texture2D(iChannel0, vec2(a + 0.1 / len, r1 ));
+            vec4 tex2 = texture2D(iChannel1, vec2(b + 0.1 / len, r2 ));
+            vec3 col = vec3(mix(tex1, tex2, m));
+            gl_FragColor = vec4(col * len * 1.5, 1.0);
+        }
+    </script>
+
+    <script src="../utils/math.js"></script>
+    <script src="../utils/webgl-helper.js"></script>
+    <script src="../utils/vector3.js"></script>
+    <script src="../utils/webgl-matrix.js"></script>
+    <script>
+        //获取canvas
+        let canvas = getCanvas('#canvas');
+        //设置canvas尺寸为满屏
+        resizeCanvas(canvas);
+        //获取绘图上下文
+        let gl = getContext(canvas);
+        //创建着色器程序
+        let program = createSimpleProgramFromScript(gl, 'vertexShader', 'fragmentShader');
+        //使用该着色器程序
+        gl.useProgram(program);
+        let a_Screen_Size = gl.getAttribLocation(program, 'a_Screen_Size');
+        gl.vertexAttrib2f(a_Screen_Size, canvas.width, canvas.height);
+        // // 找到着色器中的全局变量 iTime;
+        let iTime = gl.getUniformLocation(program, 'iTime');
+        // let a_Position = gl.getAttribLocation(program, 'a_Position');
+        // let a_Color = gl.getAttribLocation(program, 'a_Color');
+
+        // gl.enableVertexAttribArray(a_Position);
+        // gl.enableVertexAttribArray(a_Color);
+        // // 创建缓冲区
+        // let buffer = gl.createBuffer();
+        // // 绑定缓冲区为当前缓冲
+        // gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        // // 设置 a_Position 属性从缓冲区读取数据方式
+        // gl.vertexAttribPointer(a_Position, 3, gl.FLOAT, false, 28, 0);
+        // // 设置 a_Color 属性从缓冲区读取数据方式
+        // gl.vertexAttribPointer(a_Color, 4, gl.FLOAT, false, 28, 12);
+        // // 向缓冲区传递数据
+        // gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+        // //创建索引缓冲区
+        // let indicesBuffer = gl.createBuffer();
+        // //绑定索引缓冲区
+        // gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indicesBuffer);
+        // //向索引缓冲区传递索引数据
+        // gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+        // //设置清屏颜色为黑色。
+        // gl.clearColor(0, 0, 0, 1);
+        // //隐藏背面
+        // gl.enable(gl.CULL_FACE);
+
+        // var aspect = canvas.width / canvas.height;
+        // //计算正交投影矩阵
+        // var projectionMatrix = matrix.ortho(aspect * 4, -aspect * 4, -4, 4, 100, -100);
+        // var deg2radians = window.lib3d.math.deg2radians;
+        // var dstMatrix = matrix.identity();
+        // /*渲染*/
+        setInterval(() => {
+
+            render(gl);
+        }, 1000);
+        function render(gl) {
+            gl.drawArrays(gl.POINTS, 0, 1);
+        }
+
+        // var playing = false;
+        // var xAngle = 0;
+        // var yAngle = 0;
+        // var dstMatrix = matrix.identity();
+        // var tmpMatrix = matrix.identity();
+        // document.body.addEventListener('click', function () {
+        //     playing = !playing;
+        //     render();
+        // })
+        // render();
+
+    </script>
+</body>
+
+</html>

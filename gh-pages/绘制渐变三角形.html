@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>绘制渐变三角形</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="../css/common.css" />
+</head>
+
+<body>
+    <canvas id="canvas"></canvas>
+    <script type="shader-source" id="vertexShader">
+        //设置浮点数精度为中等精度。
+        precision mediump float;
+        //接收顶点坐标 (x, y)
+        attribute vec2 a_Position;
+        //接收浏览器窗口尺寸(width, height)
+        attribute vec2 a_Screen_Size;
+        //接收 JavaScript 传递的顶点颜色
+        attribute vec4 a_Color;
+        //传往片元着色器的颜色。
+        varying vec4 v_Color;
+        void main(){
+          vec2 position = (a_Position / a_Screen_Size) * 2.0 - 1.0;
+          position = position * vec2(1.0,-1.0);
+          gl_Position = vec4(position, 0, 1);
+          v_Color = a_Color;
+        }    
+        </script>
+    <script type="shader-source" id="fragmentShader">
+        //设置浮点数精度为中等。
+        precision mediump float;
+        //接收 JavaScript 传过来的颜色值（rgba）。
+        varying vec4 v_Color;
+        void main(){
+          vec4 color = v_Color / vec4(255, 255, 255, 1);
+          gl_FragColor = color;
+       }
+        </script>
+    <script src="../utils/webgl-helper.js"></script>
+    <script>
+
+        //获取canvas
+        var canvas = getCanvas("#canvas");
+        //设置canvas尺寸为满屏
+        resizeCanvas(canvas);
+        //获取绘图上下文
+        let gl = getContext(canvas);
+        //创建顶点着色器
+        let vertexShader = createShaderFromScript(gl, gl.VERTEX_SHADER, 'vertexShader');
+        //创建片元着色器
+        let fragmentShader = createShaderFromScript(gl, gl.FRAGMENT_SHADER, 'fragmentShader');
+        //创建着色器程序
+        let program = createSimpleProgram(gl, vertexShader, fragmentShader);
+        //使用该着色器程序
+        gl.useProgram(program);
+
+        let a_Screen_Size = gl.getAttribLocation(program, 'a_Screen_Size');
+		gl.vertexAttrib2f(a_Screen_Size, canvas.width, canvas.height);
+		//顶点坐标数组
+		let positions = [];
+		//顶点颜色数组
+		let colors = [];
+		let a_Position = gl.getAttribLocation(program, 'a_Position');
+		let a_Color = gl.getAttribLocation(program, 'a_Color');
+
+        //创建坐标缓冲区
+		let positionBuffer = createBuffer(gl, a_Position, {
+			size : 2
+		});
+		//创建颜色缓冲区
+		let colorBuffer = createBuffer(gl, a_Color, {
+			size : 4
+		});
+
+        //设置清除背景颜色为黑色。
+		gl.clearColor(0, 0, 0, 1);
+        // canvas.addEventListener('click', e => {
+
+        // })
+        canvas.addEventListener("click", e=>{
+			positions.push(e.pageX, e.pageY);
+			let color = randomColor();
+			colors.push(color.r, color.g, color.b, color.a);
+			// 顶点信息为6个数据即3个顶点时执行绘制操作，因为三角形由三个顶点组成。
+			if(positions.length % 6 == 0) {
+				//复制坐标信息到缓冲区中
+				gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+				gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+				//复制颜色信息到缓冲区中。
+				gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+				gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+				//重绘
+				render(gl);
+			}
+		})
+        //绘制函数
+        function render(gl) {
+            //用设置的清空画布颜色清空画布。
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            if (positions.length <= 0) {
+                return;
+            }
+            //绘制图元设置为三角形。
+            var primitiveType = gl.TRIANGLES;
+            //因为我们要绘制三个点，所以执行三次顶点绘制操作。
+            gl.drawArrays(primitiveType, 0, positions.length / 2);
+        }
+        //设置屏幕清除颜色为黑色。
+        gl.clearColor(0, 0, 0, 1.0);
+        //绘制
+        render(gl);
+
+    </script>
+
+</body>
