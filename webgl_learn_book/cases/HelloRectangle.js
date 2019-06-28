@@ -1,16 +1,12 @@
-// x· = x cos b - y sin b;
-// y· = x sin b - y cos b;
-// z· = z
-
 var VSHADER_SOURCE = `
 attribute vec4 a_Position;
-uniform mat4 u_xformMatrix;
 void main(){
-    gl_Position = u_xformMatrix * a_Position;
+    gl_Position = a_Position;//设置坐标
 }
 `;
 var FSHADER_SOURCE = `void main(){
-    gl_FragColor = vec4(1.0,0.0,0.0,1.0);
+    // gl_FragColor = vec4(1.0,0.0,0.0,1.0);
+    gl_FragColor = vec4(gl_FragCoord.x/u,0.0,0.0,1.0);
 }`
 function main() {
     //获取<canvas>元素
@@ -32,34 +28,13 @@ function main() {
         console.log(`Failed to set the position of the vertices`);
         return;
     }
-    //获取u_xformMatrix变量的地址
-    var u_xformMatrix = gl.getUniformLocation(gl.program, "u_xformMatrix");
-    //计算旋转数据
-    var radian = Math.PI * 180 /180.0;
-    var cosB = Math.cos(radian);
-    var sinB = Math.sin(radian);
-    //注意：WebGL中矩阵是列主序
-    var xformMatrix = new Float32Array([
-        cosB,sinB,0.0,0.0,
-        -sinB,cosB,0.0,0.0,
-        0.0,0.0,1.0,0.0,
-        0.0,0.0,0.0,1.0
-    ]); 
-    /**
-     * //对应的是,按列主序就是说，这个二维矩阵在一维数组的顺序,按列数，从左到右，从上到下数 cosB -> sinB -> 0 -> 0 ->  -sinB -> cosB -> 0 -> 0 ->0
-     * [cosB -sinB 0  0 ]
-     * [sinB cosB  0  0 ]
-     * [0    0     1  0 ]
-     * [0    0     0  1 ]
-     */
-    gl.uniformMatrix4fv(u_xformMatrix, false,xformMatrix);
 
     // let isDown = false;
     // var throttledDrawPoint = mthrottle(click,100);
-    canvas.onmousedown = function(ev) {
-        
-        
-    }
+    // canvas.onmousedown = function(ev) {
+    //     throttledDrawPoint(ev,gl,canvas,a_Position);
+    //     isDown = true;
+    // }
     // canvas.onmouseup = function(ev){
     //     isDown = false;
     // }
@@ -73,14 +48,18 @@ function main() {
     // 清空<canvas>
     gl.clear(gl.COLOR_BUFFER_BIT);
     //绘制n个点
-    gl.drawArrays(gl.TRIANGLES, 0, n);
+    // gl.drawArrays(gl.TRIANGLE_STRIP,0,n);
+    gl.drawArrays(gl.TRIANGLE_FAN,0,n);
+    // gl.drawArrays(gl.LINES, 0, n);
+    // gl.drawArrays(gl.LINE_STRIP, 0, n);
+    // gl.drawArrays(gl.LINE_LOOP, 0, n);
 
 
 
 }
 function initVertexBuffers(gl) {
     var vertices = new Float32Array([
-        0.0,0.5,-0.5,-0.5,0.5,-0.5
+        -0.5,0.5,-0.5,-0.5,0.5,0.5,0.5,-0.5
     ]);
     var n = vertices.length/2;//点的个数
     //创建缓冲区对象
@@ -104,5 +83,28 @@ function initVertexBuffers(gl) {
     gl.enableVertexAttribArray(a_Position);
 
     return n;
+}
+var g_points = []; // The array for the position of a mouse press
+function click(ev, gl, canvas, a_Position) {
+  var x = ev.clientX; // x coordinate of a mouse pointer
+  var y = ev.clientY; // y coordinate of a mouse pointer
+  var rect = ev.target.getBoundingClientRect() ;
+
+  x = ((x - rect.left) - canvas.width/2)/(canvas.width/2);
+  y = (canvas.height/2 - (y - rect.top))/(canvas.height/2);
+  // Store the coordinates to g_points array
+  g_points.push(x); g_points.push(y);
+
+  // Clear <canvas>
+  gl.clear(gl.COLOR_BUFFER_BIT);
+
+  var len = g_points.length;
+  for(var i = 0; i < len; i += 2) {
+    // Pass the position of a point to a_Position variable
+    gl.vertexAttrib3f(a_Position, g_points[i], g_points[i+1], 0.0);
+
+    // Draw
+    gl.drawArrays(gl.POINTS, 0, 1);
+  }
 }
 main();

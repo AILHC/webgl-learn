@@ -1,14 +1,23 @@
 var VSHADER_SOURCE = `
+
+
+
 attribute vec4 a_Position;
-attribute float a_PointSize;
+attribute vec4 a_Color;
+varying vec4 v_Color;
 void main(){
     gl_Position = a_Position;//设置坐标
-    gl_PointSize = a_PointSize;//设置点大小
+    gl_PointSize = 10.0;
+    v_Color = a_Color;
 }
 `;
-var FSHADER_SOURCE = `void main(){
-    gl_FragColor = vec4(1.0,0.0,0.0,1.0);
+var FSHADER_SOURCE = `
+precision mediump float;
+varying vec4 v_Color;
+void main(){
+    gl_FragColor = v_Color;
 }`
+
 function main() {
     //获取<canvas>元素
     var canvas = document.getElementById('webgl');
@@ -19,13 +28,13 @@ function main() {
         return;
     }
     //初始化着色器
-    if(!initShaders(gl,VSHADER_SOURCE,FSHADER_SOURCE)){
+    if (!initShaders(gl, VSHADER_SOURCE, FSHADER_SOURCE)) {
         console.log(`Failed to initialize shaders`);
         return;
     }
     //设置顶点位置
     var n = initVertexBuffers(gl);
-    if(n<0){
+    if (n < 0) {
         console.log(`Failed to set the position of the vertices`);
         return;
     }
@@ -58,18 +67,15 @@ function main() {
 }
 function initVertexBuffers(gl) {
     //顶点数组
-    var vertices = new Float32Array([
-        0.0,0.5,-0.5,-0.5,0.5,-0.5
+    var verticeColors = new Float32Array([
+        0.0, 0.5, 1.0, 0.0, 0.0,
+        -0.5, -0.5, 0.0, 1.0, 0.0,
+        0.5, -0.5, 0.0, 0.0, 1.0
     ]);
     var n = 3;//点的个数
-    //点的尺寸数组
-    var sizes = new Float32Array([
-        10.0,20.0,30.0
-    ])
     //创建缓冲区对象
     var vertexBuffer = gl.createBuffer();
-    var sizeBuffer = gl.createBuffer();
-    if(!vertexBuffer){
+    if (!vertexBuffer) {
         console.log(`Failed to create the buffer object`);
         return - 1;
     }
@@ -77,44 +83,20 @@ function initVertexBuffers(gl) {
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
 
     //向缓冲区对象中写入数据
-    gl.bufferData(gl.ARRAY_BUFFER,vertices, gl.STATIC_DRAW);
-    
-    var a_Position = gl.getAttribLocation(gl.program,'a_Position');
+    gl.bufferData(gl.ARRAY_BUFFER, verticeColors, gl.STATIC_DRAW);
+    const FSIZE = verticeColors.BYTES_PER_ELEMENT;
+    var a_Position = gl.getAttribLocation(gl.program, 'a_Position');
 
     //将缓冲区对象分配给 a_Position 变量 
-    gl.vertexAttribPointer(a_Position,2,gl.FLOAT,false,0,0);
+    gl.vertexAttribPointer(a_Position, 2, gl.FLOAT, false, FSIZE * 5, 0);
 
     //连接a_Position 变量与分配给它的缓冲区对象
     gl.enableVertexAttribArray(a_Position);
-    //将顶点尺寸写入缓冲区并开启缓冲区
-    gl.bindBuffer(gl.ARRAY_BUFFER,sizeBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER,sizes,gl.STATIC_DRAW);
-    var a_PointSize = gl.getAttribLocation(gl.program,'a_PointSize');
-    gl.vertexAttribPointer(a_PointSize,1,gl.FLOAT,false,0,0);
-    gl.enableVertexAttribArray(a_PointSize);
+    // 
+    var a_Color = gl.getAttribLocation(gl.program, 'a_Color');
+    gl.vertexAttribPointer(a_Color, 3, gl.FLOAT, false, FSIZE * 5, FSIZE * 2);
+    gl.enableVertexAttribArray(a_Color);
     return n;
 }
-var g_points = []; // The array for the position of a mouse press
-function click(ev, gl, canvas, a_Position) {
-  var x = ev.clientX; // x coordinate of a mouse pointer
-  var y = ev.clientY; // y coordinate of a mouse pointer
-  var rect = ev.target.getBoundingClientRect() ;
 
-  x = ((x - rect.left) - canvas.width/2)/(canvas.width/2);
-  y = (canvas.height/2 - (y - rect.top))/(canvas.height/2);
-  // Store the coordinates to g_points array
-  g_points.push(x); g_points.push(y);
-
-  // Clear <canvas>
-  gl.clear(gl.COLOR_BUFFER_BIT);
-
-  var len = g_points.length;
-  for(var i = 0; i < len; i += 2) {
-    // Pass the position of a point to a_Position variable
-    gl.vertexAttrib3f(a_Position, g_points[i], g_points[i+1], 0.0);
-
-    // Draw
-    gl.drawArrays(gl.POINTS, 0, 1);
-  }
-}
 main();
